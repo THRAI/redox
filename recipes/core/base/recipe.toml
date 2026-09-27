@@ -1,5 +1,6 @@
 [source]
-git = "https://gitlab.redox-os.org/redox-os/base.git"
+git = "https://github.com/THRAI/redox-base.git"
+rev = "cea4ff5e45eeaadd3a1f6d6678f45809938eb328"
 
 [build]
 template = "custom"

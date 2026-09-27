@@ -1,5 +1,6 @@
 [source]
-git = "https://gitlab.redox-os.org/redox-os/kernel.git"
+git = "https://github.com/THRAI/kernel.git"
+rev = "f10c6cd30e5bc6c6f6e5def0817dc88179a61db6"
 
 [build]
 template = "custom"
