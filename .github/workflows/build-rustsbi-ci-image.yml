@@ -29,6 +29,11 @@ jobs:
           set -eux
           curl --fail --proto '=https' --tlsv1.2 https://sh.rustup.rs \
             | sh -s -- -y --default-toolchain stable --profile minimal
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            https://github.com/mozilla/cbindgen/releases/download/0.29.0/cbindgen-ubuntu22.04 \
+            --output "${HOME}/.cargo/bin/cbindgen"
+          chmod +x "${HOME}/.cargo/bin/cbindgen"
+          "${HOME}/.cargo/bin/cbindgen" --version
           echo "${HOME}/.cargo/bin" >> "${GITHUB_PATH}"
 
       - name: Build Redox server hard-drive image
