@@ -1,0 +1,78 @@
+name: Build RustSBI Redox image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-image:
+    name: Build riscv64gc server image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    container:
+      image: docker.io/redoxos/redox-base-x86_64
+
+    steps:
+      - name: Checkout pinned Redox build tree
+        uses: actions/checkout@v7
+
+      - name: Record pinned source revisions
+        run: |
+          set -eux
+          grep -A2 '^\[source\]' recipes/core/kernel/recipe.toml
+          grep -A2 '^\[source\]' recipes/core/base/recipe.toml
+
+      - name: Install Rust build tools
+        run: |
+          set -eux
+          curl --fail --proto '=https' --tlsv1.2 https://sh.rustup.rs \
+            | sh -s -- -y --default-toolchain stable --profile minimal
+          echo "${HOME}/.cargo/bin" >> "${GITHUB_PATH}"
+
+      - name: Build Redox server hard-drive image
+        env:
+          PODMAN_BUILD: "0"
+          SKIP_CHECK_TOOLS: "1"
+          REPO_BINARY: "1"
+          FSTOOLS_NO_MOUNT: "1"
+          CI: "1"
+          COOKBOOK_LOGS: "true"
+          COOKBOOK_CLEAN_BUILD: "true"
+          COOKBOOK_VERBOSE: "false"
+          COOKBOOK_COMPRESSED: "true"
+          COOKBOOK_WEB: "true"
+          REPO_NONSTOP: "0"
+        run: |
+          set -eux
+          make \
+            ARCH=riscv64gc \
+            CONFIG_NAME=server \
+            build/riscv64gc/server/harddrive.img
+
+      - name: Package image and checksums
+        run: |
+          set -eux
+          mkdir -p dist
+          zstd --threads=0 --force \
+            build/riscv64gc/server/harddrive.img \
+            -o dist/redox_server_riscv64gc_rustsbi-ci_harddrive.img.zst
+          (
+            cd dist
+            sha256sum -b redox_server_riscv64gc_rustsbi-ci_harddrive.img.zst > SHA256SUM
+          )
+          {
+            echo "redox=${GITHUB_SHA}"
+            echo "kernel=f10c6cd30e5bc6c6f6e5def0817dc88179a61db6"
+            echo "base=cea4ff5e45eeaadd3a1f6d6678f45809938eb328"
+          } > dist/BUILD_INFO
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: redox-riscv64gc-rustsbi-ci
+          path: dist/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
